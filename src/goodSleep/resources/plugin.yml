@@ -1,0 +1,21 @@
+name: GoodSleep
+main: goodSleep.GoodSleep
+version: 1.0.0
+description: ${project.description}
+author: Thomas Faget
+website: https://github.com/thomasfaget/GoodSleep
+
+commands:
+  reload:
+    description: reload the configuration file
+    usage: /reload
+    permission: goodSleep.reload
+    permission-message: You have not the permission
+
+permissions:
+  goodSleep.reload:
+    description: Allow the player to use the /reload command
+    default: op
+  goodSleep.sleep:
+    description: Allow the player to sleep
+    default: true

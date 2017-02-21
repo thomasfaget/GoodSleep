@@ -1,0 +1,4 @@
+# Change sleepPercentange to modify the percentage of players needed to skip the night.
+# The value is between 0 and 1.
+# If the value is not correct, the sleep percentage become 0.5 (default value)
+sleepPercentage: 0.5;
