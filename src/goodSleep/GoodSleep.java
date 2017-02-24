@@ -1,9 +1,9 @@
 package goodSleep;
 
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +11,8 @@ import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBedLeaveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
 
 
 /** This plugin allows to the players to skip the night if not all players are sleeping.
@@ -21,69 +23,94 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class GoodSleep extends JavaPlugin implements Listener {
 
     private double sleepPercentage = 0.5;
-    private double nbPlayersSleeping = 0;
+    private int nbPlayersSleeping = 0;
 
     /** Actions to do when the plugin is enabled :
      * - Save the default configuration.
-     * - Init the configuration form the config file.
+     * - Init values form the config file.
      */
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-        loadConfigFile();
+        saveDefaultConfig(); // Copy config.yml for jar to GoodSleep folder
+        loadConfigFile(); // Load config.yml in the folder
 
         getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("Plugin loaded - The sleep percentage is : " + sleepPercentage);
     }
 
-    /** Actions to do when the plugin is disabled :
-     * - Nothing
-     */
-    @Override
-    public void onDisable() {
-        // Do nothing
-    }
 
     /** Read the config file and init the configuration
      */
     private void loadConfigFile() {
-        FileConfiguration config = getConfig();
         try {
-            double sp = config.getDouble("sleepPercentage");
+            double sp = (double) getConfig().get("sleepPercentage");
             if (sp>=0 && sp<=1) {
                 sleepPercentage = sp;
             }
+            else {
+                getLogger().warning("Error : sleep percentage not between 0 and 1! Check config.yml! Default values will be used");
+            }
         }
-        catch (NumberFormatException e){
-            getLogger().warning("[GoodSleep] Error during reading the sleepPercentage in the config file!");
+        catch (Exception e){
+            getLogger().warning("Error : Can't read config.yml! Check config.yml! Default values will be used");
         }
     }
 
+
+    /** Handle command thrown by players
+     */
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        // Command "/reload"
+        // Command : "/reload"
         if ( cmd.getName().equals("reload") ) {
             loadConfigFile();
             return true;
         }
-        return false;
+        // Command : /setSleepPercentage <value between 0 and 1>
+        else if ( cmd.getName().equals("setSleepPercentage") ) {
+            if ( args.length == 0 || Double.parseDouble(args[0]) < 0.0 || Double.parseDouble(args[0]) > 1.0 ) {
+                sender.sendMessage("Usage : /setSleepPercentage <value between 0 and 1>");
+                return false;
+            }
+            else {
+                sleepPercentage = Double.parseDouble(args[0]);
+                getConfig().set("sleepPercentage", sleepPercentage);
+                getLogger().info("Sleep percentage changed to " + sleepPercentage);
+                sender.sendMessage("Sleep percentage changed to " + sleepPercentage);
+                return true;
+            }
+        }
+        else {
+            return false;
+        }
     }
 
+    /** Prevent player entering in a bed.
+     * Update the number of player sleeping
+     * Skip the night if needed
+     */
     @EventHandler
     public void onPlayerBedEnter(PlayerBedEnterEvent e) {
         Player player = e.getPlayer();
         World world = player.getWorld();
-        double nbPlayers = world.getPlayers().size();
+        List<Player> playerList = world.getPlayers();
 
         // Test if the player have the permission to sleep (using the plugin)
         if ( player.hasPermission("goodSleep.sleep") || e.isCancelled() ) {
             nbPlayersSleeping++;
+            getLogger().info(player.getName() + " sleep -> " + nbPlayersSleeping + "/"  + playerList.size());
 
-            if ( nbPlayersSleeping/nbPlayers >= sleepPercentage ) {
-                skipNight(world);
-            }
-            else {
-                // Notify all the players :
-                world.getPlayers().forEach( p -> p.sendMessage(p.getName() + " is Sleeping (" + nbPlayersSleeping + "/" + nbPlayers + ")") );
+            // Test to skip the night
+            if (!skipNight(world)) {
+                // Notify all the players if not enough people are sleeping :
+                playerList.forEach(p -> p.sendMessage(
+                        ChatColor.GOLD + p.getName() +
+                                ChatColor.WHITE + " is sleeping (" +
+                                ChatColor.YELLOW + nbPlayersSleeping +
+                                ChatColor.WHITE + "/" +
+                                ChatColor.GREEN + playerList.size() +
+                                ChatColor.WHITE + ")"
+                ));
             }
             nbPlayersSleeping = 0; // Reset the number of people sleeping
         }
@@ -93,55 +120,100 @@ public class GoodSleep extends JavaPlugin implements Listener {
 
     }
 
-    /** Skip the night and send a message to all the players.
-     * Method used when their is enough player sleeping.
-     * Also clear storms and thundering
+
+
+    /** Prevent if the player leave the bed while sleep.
+     * Update the number of player sleeping
      */
-    private void skipNight(World world) {
-        world.setTime(22796);
-        world.getPlayers().forEach(p -> p.sendMessage("Good morning Minecraft"));
-
-        if ( world.hasStorm() ) {
-            world.setStorm(false);
-        }
-        if ( world.isThundering() ) {
-            world.setThundering(false);
-        }
-    }
-
     @EventHandler
     public void onPlayerBedLeave(PlayerBedLeaveEvent e) {
         Player player = e.getPlayer();
         World world = player.getWorld();
-        double nbPlayers = world.getPlayers().size();
+        long worldTime = world.getTime();
+        List<Player> playerList = world.getPlayers();
 
-        if ( player.hasPermission("goodSleep.sleep")  ) {
-            nbPlayersSleeping--;
+        // Test if the player has the permission,
+        if ( player.hasPermission("goodSleep.sleep") ) {
+            // Test if player leave bed while sleeping (not at the morning)
+            if ( worldTime>13000 ) {
+                nbPlayersSleeping--;
+                getLogger().info(player.getName() + " leaves bed -> " + nbPlayersSleeping + "/" + playerList.size());
 
-            // Notify all the players :
-            world.getPlayers().forEach( p -> p.sendMessage(p.getName() + " leave his bed (" + nbPlayersSleeping + "/" + nbPlayers + ")") );
+                // Notify all the players :
+                playerList.forEach(p -> p.sendMessage(
+                        ChatColor.GOLD + p.getName() +
+                        ChatColor.WHITE + " leaves his bed (" +
+                        ChatColor.YELLOW + nbPlayersSleeping +
+                        ChatColor.WHITE + "/" +
+                        ChatColor.GREEN + playerList.size() +
+                        ChatColor.WHITE + ")"
+                ));
+            }
         }
         else {
             player.sendMessage("You haven't the permission to use GoodSleep!");
         }
     }
 
-    @EventHandler
+
     /** Prevent players leaving the game while sleeping
+     * Update the number of player sleeping
+     * Skip the night if needed
      */
+    @EventHandler
     public void onPlayerLeave(PlayerQuitEvent e) {
         Player player = e.getPlayer();
         World world = player.getWorld();
-        double nbPlayers = world.getPlayers().size();
+        List<Player> playerList = world.getPlayers();
 
-        if ( player.hasPermission("goodSleep.sleep") && player.isSleeping() ) {
-            nbPlayersSleeping--;
+        // Test permission
+        if ( player.hasPermission("goodSleep.sleep") ) {
+            // Test if player sleep (while leaving the game)
+            if (player.isSleeping()) {
+                nbPlayersSleeping--;
+                getLogger().info(player.getName() + " leaves game -> " + nbPlayersSleeping + "/" + playerList.size());
 
-            // Notify all the players :
-            world.getPlayers().forEach( p -> p.sendMessage(p.getName() + " leave the game! (" + nbPlayersSleeping + "/" + nbPlayers + ")") );
+                // Test to skip the night
+                if (!skipNight(world)) {
+                    // Notify all the players if not enough people are sleeping :
+                    playerList.forEach(p -> p.sendMessage(
+                            ChatColor.GOLD + p.getName() +
+                                    ChatColor.WHITE + " leaves his bed (" +
+                                    ChatColor.YELLOW + nbPlayersSleeping +
+                                    ChatColor.WHITE + "/" +
+                                    ChatColor.GREEN + playerList.size() +
+                                    ChatColor.WHITE + ")"
+                    ));
+                }
+            }
         }
         else {
             player.sendMessage("You haven't the permission to use GoodSleep!");
+        }
+    }
+
+
+    /** Test if the enough are sleeping to skip the night
+     * If yes : skip the night and send a message to all the players.
+     * Reset rain and storm at the morning.
+     */
+    private boolean skipNight(World world) {
+
+        // Test if enough players are sleeping
+        if ( (double) nbPlayersSleeping/(double) world.getPlayers().size() >= sleepPercentage ) {
+            world.setTime(10);
+            world.getPlayers().forEach(p -> p.sendMessage(ChatColor.GREEN + "Good morning Minecraft"));
+
+            if ( world.hasStorm() ) {
+                world.setStorm(false);
+            }
+            if ( world.isThundering() ) {
+                world.setThundering(false);
+            }
+            return true;
+        }
+        else {
+            return false;
         }
     }
 
