@@ -39,20 +39,25 @@ public class GoodSleep extends JavaPlugin implements Listener {
     }
 
 
-    /** Read the config file and init the configuration
+    /** Read the config file and init the configuration.
+     *
+     * @return if the configuration file was correctly read
      */
-    private void loadConfigFile() {
+    private boolean loadConfigFile() {
         try {
             double sp = (double) getConfig().get("sleepPercentage");
             if (sp>=0 && sp<=1) {
                 sleepPercentage = sp;
+                return true;
             }
             else {
                 getLogger().warning("Error : sleep percentage not between 0 and 1! Check config.yml! Default values will be used");
+                return false;
             }
         }
         catch (Exception e){
             getLogger().warning("Error : Can't read config.yml! Check config.yml! Default values will be used");
+            return true;
         }
     }
 
@@ -63,8 +68,16 @@ public class GoodSleep extends JavaPlugin implements Listener {
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         // Command : "/reload"
         if ( cmd.getName().equals("reload") ) {
-            loadConfigFile();
-            return true;
+            if ( loadConfigFile( )) {
+                getLogger().info("Config reload. Sleep percentage : " + sleepPercentage);
+                sender.sendMessage("Plugin reloaded !");
+                return true;
+            }
+            else {
+                getLogger().info("Config reload. Sleep percentage : " + sleepPercentage);
+                sender.sendMessage("Error ! Plugin not reloaded !");
+                return false;
+            }
         }
         // Command : /setSleepPercentage <value between 0 and 1>
         else if ( cmd.getName().equals("setSleepPercentage") ) {
@@ -195,19 +208,21 @@ public class GoodSleep extends JavaPlugin implements Listener {
 
     /** Test if the enough are sleeping to skip the night
      * If yes : skip the night and send a message to all the players.
-     * Reset rain and storm at the morning.
+     * Clear rain and storm at the morning.
+     *
+     * @return if the night was skipped or not
      */
     private boolean skipNight(World world) {
 
         // Test if enough players are sleeping
         if ( (double) nbPlayersSleeping/(double) world.getPlayers().size() >= sleepPercentage ) {
-            world.setTime(10);
+            world.setTime(10); // Set time to morning
             world.getPlayers().forEach(p -> p.sendMessage(ChatColor.GREEN + "Good morning Minecraft"));
 
-            if ( world.hasStorm() ) {
+            if ( world.hasStorm() ) { // Clear rain/storm
                 world.setStorm(false);
             }
-            if ( world.isThundering() ) {
+            if ( world.isThundering() ) { // Clear thunder
                 world.setThundering(false);
             }
             return true;
