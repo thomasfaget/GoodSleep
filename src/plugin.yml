@@ -1,18 +1,19 @@
 name: GoodSleep
 main: goodSleep.GoodSleep
-version: 1.0.2
+version: 1.0.3
 description: A plugin for Minecraft servers
 author: Thomas Faget
 website: https://github.com/thomasfaget/GoodSleep
 
 commands:
   reload:
-    description: reload the configuration file
+    description: A GoodSleep command
     usage: /reload
     permission: goodSleep.reload
     permission-message: You have not the permission
   setSleepPercentage:
-    description: change the value of sleep percentage
+    description: A GoodSleep command
+    usage: /setsleeppercentage <value between 0 and 1>
     permission: goodSleep.setSleepPercentage
     permission-message: You have not the permission
 

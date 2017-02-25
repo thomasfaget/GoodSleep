@@ -113,7 +113,7 @@ public class GoodSleep extends JavaPlugin implements Listener {
         // Test if the player have the permission to sleep (using the plugin)
         if ( player.hasPermission("goodSleep.sleep") || e.isCancelled() ) {
             nbPlayersSleeping++;
-            int nbPlayersNeeded = Math.max( (int) (playerList.size()*sleepPercentage) , 1 );
+            int nbPlayersNeeded = Math.max( (int)  Math.ceil(playerList.size()*sleepPercentage) , 1 );
 
             getLogger().info(player.getName() + " sleep -> " + nbPlayersSleeping + "/"  + nbPlayersNeeded);
 
@@ -128,6 +128,9 @@ public class GoodSleep extends JavaPlugin implements Listener {
                                 ChatColor.GREEN + nbPlayersNeeded +
                                 ChatColor.WHITE + ")"
                 ));
+
+            }
+            else {
                 nbPlayersSleeping = 0; // Reset the number of people sleeping
             }
 
@@ -154,7 +157,7 @@ public class GoodSleep extends JavaPlugin implements Listener {
             // Test if player leave bed while sleeping (not at the morning)
             if ( world.getTime()>13000 ) {
                 nbPlayersSleeping--;
-                int nbPlayersNeeded = (int) (playerList.size()*sleepPercentage);
+                int nbPlayersNeeded = (int) Math.ceil(playerList.size()*sleepPercentage);
 
                 getLogger().info(player.getName() + " leaves bed -> " + nbPlayersSleeping + "/" + nbPlayersNeeded);
 
@@ -190,7 +193,7 @@ public class GoodSleep extends JavaPlugin implements Listener {
             // Test if player sleep (while leaving the game)
             if (player.isSleeping()) {
                 nbPlayersSleeping--;
-                int nbPlayersNeeded = (int) (playerList.size()*sleepPercentage);
+                int nbPlayersNeeded = (int) Math.ceil(playerList.size()*sleepPercentage);
 
                 getLogger().info(player.getName() + " leaves game -> " + nbPlayersSleeping + "/" + nbPlayersNeeded);
 
@@ -205,6 +208,8 @@ public class GoodSleep extends JavaPlugin implements Listener {
                                     ChatColor.GREEN + nbPlayersNeeded +
                                     ChatColor.WHITE + ")"
                     ));
+                }
+                else {
                     nbPlayersSleeping = 0; // Reset the number of people sleeping
                 }
             }
