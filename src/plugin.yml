@@ -1,6 +1,6 @@
 name: GoodSleep
 main: goodSleep.GoodSleep
-version: 1.0.0
+version: 1.0.1
 description: A plugin for Minecraft servers
 author: Thomas Faget
 website: https://github.com/thomasfaget/GoodSleep
@@ -17,6 +17,9 @@ commands:
     permission-message: You have not the permission
 
 permissions:
+  goodSleep.sleep:
+    description: Allow the player to sleep with the plugin supervision
+    default: true
   goodSleep.reload:
     description: Allow the player to use the /reload command
     default: op

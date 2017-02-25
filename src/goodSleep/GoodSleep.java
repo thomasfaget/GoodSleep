@@ -68,7 +68,8 @@ public class GoodSleep extends JavaPlugin implements Listener {
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         // Command : "/reload"
         if ( cmd.getName().equals("reload") ) {
-            if ( loadConfigFile( )) {
+            reloadConfig();
+            if ( loadConfigFile() ) {
                 getLogger().info("Config reload. Sleep percentage : " + sleepPercentage);
                 sender.sendMessage("Plugin reloaded !");
                 return true;
@@ -88,6 +89,7 @@ public class GoodSleep extends JavaPlugin implements Listener {
             else {
                 sleepPercentage = Double.parseDouble(args[0]);
                 getConfig().set("sleepPercentage", sleepPercentage);
+                saveConfig();
                 getLogger().info("Sleep percentage changed to " + sleepPercentage);
                 sender.sendMessage("Sleep percentage changed to " + sleepPercentage);
                 return true;
@@ -111,17 +113,19 @@ public class GoodSleep extends JavaPlugin implements Listener {
         // Test if the player have the permission to sleep (using the plugin)
         if ( player.hasPermission("goodSleep.sleep") || e.isCancelled() ) {
             nbPlayersSleeping++;
+            int nbPlayersNeeded = (int) (playerList.size()*sleepPercentage);
+
             getLogger().info(player.getName() + " sleep -> " + nbPlayersSleeping + "/"  + playerList.size());
 
             // Test to skip the night
             if (!skipNight(world)) {
                 // Notify all the players if not enough people are sleeping :
                 playerList.forEach(p -> p.sendMessage(
-                        ChatColor.GOLD + p.getName() +
+                        ChatColor.GOLD + player.getName() +
                                 ChatColor.WHITE + " is sleeping (" +
                                 ChatColor.YELLOW + nbPlayersSleeping +
                                 ChatColor.WHITE + "/" +
-                                ChatColor.GREEN + playerList.size() +
+                                ChatColor.GREEN + nbPlayersNeeded +
                                 ChatColor.WHITE + ")"
                 ));
             }
@@ -150,15 +154,17 @@ public class GoodSleep extends JavaPlugin implements Listener {
             // Test if player leave bed while sleeping (not at the morning)
             if ( worldTime>13000 ) {
                 nbPlayersSleeping--;
-                getLogger().info(player.getName() + " leaves bed -> " + nbPlayersSleeping + "/" + playerList.size());
+                int nbPlayersNeeded = (int) (playerList.size()*sleepPercentage);
+
+                getLogger().info(player.getName() + " leaves bed -> " + nbPlayersSleeping + "/" + nbPlayersNeeded);
 
                 // Notify all the players :
                 playerList.forEach(p -> p.sendMessage(
-                        ChatColor.GOLD + p.getName() +
+                        ChatColor.GOLD + player.getName() +
                         ChatColor.WHITE + " leaves his bed (" +
                         ChatColor.YELLOW + nbPlayersSleeping +
                         ChatColor.WHITE + "/" +
-                        ChatColor.GREEN + playerList.size() +
+                        ChatColor.GREEN + nbPlayersNeeded +
                         ChatColor.WHITE + ")"
                 ));
             }
@@ -184,17 +190,19 @@ public class GoodSleep extends JavaPlugin implements Listener {
             // Test if player sleep (while leaving the game)
             if (player.isSleeping()) {
                 nbPlayersSleeping--;
-                getLogger().info(player.getName() + " leaves game -> " + nbPlayersSleeping + "/" + playerList.size());
+                int nbPlayersNeeded = (int) (playerList.size()*sleepPercentage);
+
+                getLogger().info(player.getName() + " leaves game -> " + nbPlayersSleeping + "/" + nbPlayersNeeded);
 
                 // Test to skip the night
                 if (!skipNight(world)) {
                     // Notify all the players if not enough people are sleeping :
-                    playerList.forEach(p -> p.sendMessage(
+                    playerList.forEach(p -> player.sendMessage(
                             ChatColor.GOLD + p.getName() +
                                     ChatColor.WHITE + " leaves his bed (" +
                                     ChatColor.YELLOW + nbPlayersSleeping +
                                     ChatColor.WHITE + "/" +
-                                    ChatColor.GREEN + playerList.size() +
+                                    ChatColor.GREEN + nbPlayersNeeded +
                                     ChatColor.WHITE + ")"
                     ));
                 }
