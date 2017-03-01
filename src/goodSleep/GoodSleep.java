@@ -95,6 +95,37 @@ public class GoodSleep extends JavaPlugin implements Listener {
                 return true;
             }
         }
+        // Command : /sleep
+        else if ( cmd.getName().equals("sleep") ) {
+            // Test the permission
+            if ( sender.hasPermission("goodSleep.sleep") ) {
+                World world = ((Player) sender).getWorld();
+                List<Player> playerList = world.getPlayers();
+                nbPlayersSleeping++;
+                int nbPlayersNeeded = Math.max((int) Math.ceil(playerList.size() * sleepPercentage), 1);
+
+                getLogger().info(sender.getName() + " sleep -> " + nbPlayersSleeping + "/" + nbPlayersNeeded);
+
+                // Test to skip the night
+                if (!skipNight(world)) {
+                    // Notify all the players if not enough people are sleeping :
+                    playerList.forEach(p -> p.sendMessage(
+                            ChatColor.GOLD + sender.getName() +
+                                    ChatColor.WHITE + " is sleeping (" +
+                                    ChatColor.YELLOW + nbPlayersSleeping +
+                                    ChatColor.WHITE + "/" +
+                                    ChatColor.GREEN + nbPlayersNeeded +
+                                    ChatColor.WHITE + ")"
+                    ));
+
+                }
+                return true;
+            }
+            else {
+                sender.sendMessage("You haven't the permission to use GoodSleep!");
+                return false;
+            }
+        }
         else {
             return false;
         }
